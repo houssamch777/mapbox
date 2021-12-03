@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Demo: Build a store locator using Mapbox GL JS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://api.tiles.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.js"></script>
+<link
+href="https://api.tiles.mapbox.com/mapbox-gl-js/v2.6.0/mapbox-gl.css"
+rel="stylesheet"
+/>
+<style>
+body {
+color: #404040;
+font: 400 15px/22px 'Source Sans Pro', 'Helvetica Neue', sans-serif;
+margin: 0;
+padding: 0;
+-webkit-font-smoothing: antialiased;
+}
+ 
+* {
+box-sizing: border-box;
+}
+ 
+.sidebar {
+position: absolute;
+width: 33.3333%;
+height: 100%;
+top: 0;
+left: 0;
+overflow: hidden;
+border-right: 1px solid rgba(0, 0, 0, 0.25);
+}
+ 
+.map {
+position: absolute;
+left: 33.3333%;
+width: 66.6666%;
+top: 0;
+bottom: 0;
+}
+ 
+h1 {
+font-size: 22px;
+margin: 0;
+font-weight: 400;
+line-height: 20px;
+padding: 20px 2px;
+}
+ 
+a {
+color: #404040;
+text-decoration: none;
+}
+ 
+a:hover {
+color: #101010;
+}
+ 
+.heading {
+background: #fff;
+border-bottom: 1px solid #eee;
+min-height: 60px;
+line-height: 60px;
+padding: 0 10px;
+background-color: #00853e;
+color: #fff;
+}
+ 
+.listings {
+height: 100%;
+overflow: auto;
+padding-bottom: 60px;
+}
+ 
+.listings .item {
+display: block;
+border-bottom: 1px solid #eee;
+padding: 10px;
+text-decoration: none;
+}
+ 
+.listings .item:last-child {
+border-bottom: none;
+}
+.listings .item .title {
+display: block;
+color: #00853e;
+font-weight: 700;
+}
+ 
+.listings .item .title small {
+font-weight: 400;
+}
+.listings .item.active .title,
+.listings .item .title:hover {
+color: #8cc63f;
+}
+.listings .item.active {
+background-color: #f8f8f8;
+}
+::-webkit-scrollbar {
+width: 3px;
+height: 3px;
+border-left: 0;
+background: rgba(0, 0, 0, 0.1);
+}
+::-webkit-scrollbar-track {
+background: none;
+}
+::-webkit-scrollbar-thumb {
+background: #00853e;
+border-radius: 0;
+}
+ 
+.marker {
+border: none;
+cursor: pointer;
+height: 56px;
+width: 56px;
+background-image: url(marker.png);
+}
+ 
+/* Marker tweaks */
+.mapboxgl-popup {
+padding-bottom: 50px;
+}
+ 
+.mapboxgl-popup-close-button {
+display: none;
+}
+.mapboxgl-popup-content {
+font: 400 15px/22px 'Source Sans Pro', 'Helvetica Neue', sans-serif;
+padding: 0;
+width: 180px;
+}
+.mapboxgl-popup-content h3 {
+background: #91c949;
+color: #fff;
+margin: 0;
+padding: 10px;
+border-radius: 3px 3px 0 0;
+font-weight: 700;
+margin-top: -15px;
+}
+ 
+.mapboxgl-popup-content h4 {
+margin: 0;
+padding: 10px;
+font-weight: 400;
+}
+ 
+.mapboxgl-popup-content div {
+padding: 10px;
+}
+ 
+.mapboxgl-popup-anchor-top > .mapboxgl-popup-content {
+margin-top: 15px;
+}
+ 
+.mapboxgl-popup-anchor-top > .mapboxgl-popup-tip {
+border-bottom-color: #91c949;
+}
+</style>
+</head>
+<body>
+ <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.js"></script>
+<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.css" type="text/css">
+<div class="sidebar">
+<div class="heading">
+<h1>Our locations!  <button onclick="getLocation()">GPS</button></h1>
+
+</div>
+<div id="listings" class="listings">
+{% for i in addresses %}
+<div id="listings-{{i.id}}" class='item'>
+    <a href='#' class='title' id='link-{{i.id}}' onclick="return func('{{i.address}}','{{i.long}}','{{i.lat}}');"  >
+    {{i.address}}
+    </a>
+    {%if i.img %}
+    <div>
+        <img src="{{i.img.url}}" alt="" style="width:128px;height:128px;align-items: center;" >  
+    </div>
+    {%endif%}
+</div>
+{% endfor %}
+
+</div>
+</div>
+<div id="map" class="map">
+
+</div>
+<script type="text/javascript">
+    mapboxgl.accessToken = 'pk.eyJ1IjoiaG91c3NhbWNoMDEiLCJhIjoiY2t2czVjYnlmMHk0OTJycXB6MzF0Y21xYyJ9.aHq_Gn0uxs5Hczf9EPwpVA';
+    mapboxgl.setRTLTextPlugin(
+    'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js',
+    null,
+    true // Lazy load the plugin
+    );
+     
+    const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v11',
+    center: [44.3763, 33.2788],
+    zoom: 11
+    });
+//{% for address in addresses %}
+//    var marker = new mapboxgl.Marker()
+//        .setLngLat([{{ address.long }}, {{ address.lat }}])
+//        .setPopup(new mapboxgl.Popup().setHTML(
+//            `<h3>{{ address.address }}</h3><h4>{{ address.lat }}|{{ address.long }}</h4>`
+//            )
+//            )
+//        .addTo(map);
+//{% endfor %}
+map.addControl(new mapboxgl.FullscreenControl());
+function addmr(address,long,lat) {
+    alert("Hello");
+    var marker = new mapboxgl.Marker()
+       .setLngLat([ marker.long ,  marker.lat ])
+       .setPopup(new mapboxgl.Popup().setHTML(
+           `<h3>address </h3><h4> lat | long </h4>`
+           )
+            )
+        .addTo(map);
+}
+function func (address,long,lat) {
+    
+    var marker = new mapboxgl.Marker()
+       .setLngLat([ long ,lat ])
+        .setPopup(new mapboxgl.Popup().setHTML(
+            "<h3>"+address+" </h3><h4>"+lat+" |"+long+"</h4>"
+            )
+            )
+        .addTo(map);
+        flyToStore(long,lat)
+    
+}
+function flyToStore(long,lat) {
+    map.flyTo({
+    center: [long,lat],
+    zoom: 15
+    });
+    }
+function getLocation() {
+     if (navigator.geolocation) {
+       navigator.geolocation.getCurrentPosition(showPosition);
+      } else { 
+        alert("Geolocation is not supported by this browser.") ;
+     }
+    }
+function showPosition(position) {
+    func("mygps",position.coords.longitude,position.coords.latitude);
+}
+map.addControl(
+new MapboxDirections({
+accessToken: mapboxgl.accessToken
+}),
+'top-left'
+);
+</script>
+</body>
+</html>
