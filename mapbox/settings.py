@@ -25,7 +25,7 @@ SECRET_KEY = 'o2upvdmnyky8d_y8*zih-2i%xlx!bsniy2vso6)oe9ne!72jh5'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1',"mapboxbiskra.herokuapp.com"]
 
 
 # Application definition
